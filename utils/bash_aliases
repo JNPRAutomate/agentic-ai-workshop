@@ -1,0 +1,51 @@
+# GOTO
+# MCP servers
+alias gomcps='cd ~/mcps/'
+alias gojunosmcp='cd ~/mcps/junos-mcp-server'
+alias golinuxmcp='cd ~/mcps/linux-mcp-server'
+# Use cases
+alias gousecase1='cd ~/workspace/uc1-lldp'
+alias gousecase2='cd ~/workspace/uc2-ifs-desc'
+alias gousecase3='cd ~/workspace/uc3-ospf'
+alias gousecase4='cd ~/workspace/uc4-isis'
+alias gousecase5='cd ~/workspace/uc5-j2'
+alias gousecase6='cd ~/workspace/uc6-l3vpn'
+alias gousecase7='cd ~/workspace/uc7-jvd'
+alias gousecase8='cd ~/workspace/uc8-health'
+# Go Workspace directory
+alias goworkspace='cd ~/workspace'
+alias goutils='cd ~/workspace/utils'
+# Go up one or more directories
+alias ..='cd ..'
+alias ...='cd ../../'
+alias ....='cd ../../../'
+alias .....='cd ../../../../'
+
+## python3
+alias python='python3'
+alias pip='pip3'
+
+## git
+alias gitlog='git log --graph --oneline --decorate --all'
+alias gitlogdate='git log --pretty=format:"%C(green)%h\\ %C(yellow)[%ad]%Cred%d\\ %Creset%s%Cblue\\ [%an]" --decorate --date=relative'
+alias gitloglive='while :; do clear; git --no-pager log --color -20 --graph --oneline --decorate --all $*; sleep 1; done'
+alias gittreelive='while :; do clear; tree .git/; sleep 1; done'
+alias gitrefloglive='while :; do clear; git reflog --color --oneline --decorate -20; sleep 1; done'
+
+## miscelaneous
+alias mkdir='mkdir -pv'
+alias match='grep'
+alias ltime='ls -ltrah'
+alias topsizers='du -sh * | sort -hr | head | cat -n -'
+alias topcommands='history | awk '\''BEGIN {FS="[ \t]+|\\|"} {print $3}'\'' | sort | uniq -c | sort -nr | head'
+alias backup='f(){
+    local file=$1
+    cp ${file} ${file}.bck
+    unset -f f
+    }; f'
+alias findprocessrunningport='f(){
+    local port=$1
+    lsof -i tcp:${port}
+    unset -f f
+    }; f'
+alias reload='source ~/.bashrc && echo "" && echo " File .bashrc reloaded correctly!" || echo " Syntax error, could not import the file!" && echo ""'

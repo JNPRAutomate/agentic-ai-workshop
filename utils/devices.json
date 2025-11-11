@@ -1,0 +1,56 @@
+{
+    "pe1": {
+        "ip": "pe1",
+        "port": 22,
+        "username": "claude",
+        "auth": {
+            "type": "ssh_key",
+            "private_key_path": "/home/claude/.ssh/id_rsa_claude"
+        }
+    },
+    "pe2": {
+        "ip": "pe2",
+        "port": 22,
+        "username": "claude",
+        "auth": {
+            "type": "ssh_key",
+            "private_key_path": "/home/claude/.ssh/id_rsa_claude"
+        }
+    },
+    "pe3": {
+        "ip": "pe3",
+        "port": 22,
+        "username": "claude",
+        "auth": {
+            "type": "ssh_key",
+            "private_key_path": "/home/claude/.ssh/id_rsa_claude"
+        }
+    },
+    "pe4": {
+        "ip": "pe4",
+        "port": 22,
+        "username": "claude",
+        "auth": {
+            "type": "ssh_key",
+            "private_key_path": "/home/claude/.ssh/id_rsa_claude"
+        }
+    },
+    "pe5": {
+        "ip": "pe5",
+        "port": 22,
+        "username": "claude",
+        "auth": {
+            "type": "ssh_key",
+            "private_key_path": "/home/claude/.ssh/id_rsa_claude"
+        }
+    },
+    "pe6": {
+        "ip": "pe6",
+        "port": 22,
+        "username": "claude",
+        "auth": {
+            "type": "ssh_key",
+            "private_key_path": "/home/claude/.ssh/id_rsa_claude"
+        }
+    }
+}
