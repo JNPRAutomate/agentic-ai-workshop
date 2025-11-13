@@ -32,7 +32,7 @@ The service provider uses `MPLS` (Multiprotocol Label Switching) to create isola
 
 ## Summary
 
-After deploying a Container Lab topology (see above diagram) with cRPD routers and Alpine Linux customer edge devices, users identify a connectivity failure in a configured L3VPN service where CE1 cannot reach CE2. The AI agent performs systematic L3VPN troubleshooting, analyzing MPLS core LSP establishment, IGP routing, BGP session states, VRF route propagation, and next-hop resolution across PE and P routers. Through methodical diagnosis—while users monitor with continuous ping tests—the agent identifies root cause issues ultimately restoring end-to-end L3VPN connectivity between customer sites.
+After deploying a Container Lab topology (see above diagram) with cRPD routers and Alpine Linux customer edge devices, users identify a connectivity failure in a configured **L3VPN** service where **CE1** cannot reach **CE2**. The AI agent performs systematic L3VPN **troubleshooting**, analyzing MPLS core LSP establishment, IGP routing, BGP session states, VRF route propagation, and next-hop resolution across **PE** and **P** routers. Through methodical diagnosis—while users monitor with continuous ping tests—the agent identifies root cause issues ultimately restoring end-to-end L3VPN connectivity between customer sites.
 
 ## Steps
 
@@ -100,7 +100,7 @@ This step corresponds to `milestone #2` 🚩.
 
 #### 3. Prompt - New topology clarification
 
-> In this use case, the topology nodes have a few different nodes (Linux Alpine and JunOS cRPD). It is reusing the IPs of other routers, however the list of routers you are getting from the tool `get router list` is not exactly as in this use case. Here it is the mapping:
+> In this use case, the topology nodes have a few different nodes (Linux `Alpine` and JunOS `cRPD`). It is reusing the IPs of other routers, however the list of routers you are getting from the tool `get router list` is not exactly as in this use case. Here it is the mapping:
 >    - pe1 -> pe1
 >    - pe2 -> pe2
 >    - pe3 -> p
@@ -112,7 +112,7 @@ This step corresponds to `milestone #3` 🚩.
 
 #### 4. Prompt - Troubleshooting
 
-> This topology has a L3VPN service configured, but it is not working. Why? Help me troubleshoot it!
+> This topology is an `MPLS L3VPN` network with `ISIS` as the `IGP`. Neither `RSVP` nor `LDP` are configured. It is using `BGP labeled-unicast` instead. There is a `L3VPN service` configured, but it is not working properly. (CE1 cannot `ping` CE2 and viceversa). Help me troubleshoot it!
 
 This step corresponds to `milestone #4` 🚩.
 
