@@ -79,7 +79,7 @@ claude@R5>
 
 ## Summary
 
-After deploying a Container Lab topology with cRPD devices, we will validate the absence of time-zone configurations and then leverage AI-assisted template-driven provisioning. The workflow demonstrates rendering configurations from existing Jinja2 templates with YAML variables, performing dry-run validations before deployment, and dynamically generating new templates through the AI agent—showcasing automated configuration management, safe change deployment practices, and the ability to programmatically provision network devices at scale while maintaining configuration consistency across the infrastructure.
+After deploying a Container Lab topology with cRPD devices, we will validate the absence of **time-zone** configurations and then leverage AI-assisted template-driven provisioning. The workflow demonstrates rendering configurations from existing **Jinja2 templates** with **YAML** variables, performing **dry-run** validations before deployment, and dynamically generating new templates through the AI agent, showcasing automated configuration management, safe change deployment practices, and the ability to programmatically provision network devices at scale while maintaining configuration consistency across the infrastructure.
 
 ## Steps
 
@@ -119,30 +119,23 @@ This step corresponds to `milestone #2` 🚩.
 
 #### 3. Prompt - Check if there is any time-zone configured in the network
 
-> Connect to each of the cRPD devices and create a table showing the configuration related to the `time-zone`. If it is empty, just write `EMTPY`.
+💡tip: If you want to save some tokens, there is no need to run this step, since it is just going to create a table with its findings.
+
+> Connect to each of the PE devices and create a table showing the configuration related to the `time-zone`. If it is empty, just write `EMTPY`.
 
 This step corresponds to `milestone #3` 🚩.
 
 #### 4. Prompt - Render configuration from template and variables
 
-> 1. Use the jinja2 configuration template (`template/timezone_config.j2`) to render a piece of config together with the variables (`template/timezone_vars.yml`).
+> 1. Create a simple `Jinja2` template in `set` format for `JunOS` that configures `timezone` with timezone as a variable.
+> 2. Use timezone value `America/Los_Angeles` for PE1, PE2 and PE3 and `America/New_York` for PE4, PE5 and PE6.
 > 2. Show the configuration rendered.
 > 3. Do a `dry-run` at one of the devices (e.g. `pe2`).
 > 4. If succeeded, then `push` the configs to all of them.
 
 This step corresponds to `milestone #4` 🚩.
 
-#### 5. Prompt - Generate another template
-
-> 1. Create another simple `jinja2 template` in the same folder as `template/timezone_config.j2` related to a different topic in the configuration.
-> 2. Create also the `variables` required to generate a valid piece of config to provision the cRPD devices and place it as well in the same folder.
-> 3. Show the jinja2 template, the variables file and the final configuration rendered.
-> 4. Do a `dry-run` at one of the devices.
-> 5. If succeeded, then `push` the configs to all of them. If not, try just one more time with a template related to `Interface descriptions`.
-
-This step corresponds to `milestone #5` 🚩.
-
-#### 6. Prompt - Destroy the topology
+#### 5. Prompt - Destroy the topology
 
 1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finishes or proctors move the the next one.
 2. 💡tip: If you feel confortable with ContainerLab and linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
@@ -166,7 +159,7 @@ else, ask the AI agent to do it for you with this prompt:
 > 2. Destroy the container lab topology from `use case #5 (jinja2 template)` workspace and clean up the environment.
 > 3. Do not add any environment cleanup summary.
 
-This step corresponds to `milestone #6` 🚩.
+This step corresponds to `milestone #5` 🚩.
 
 ---
 
@@ -181,9 +174,8 @@ These are the milestones accomplished in this use case (either manually or by pr
 1. 🚩 Prompt - Ask our AI agent to connect to the Linux server and deploy a Container Lab topology (Linux MCP).
 2. 🚩 Manual - Connect to the network of cRPD devices and check that there is no `time-zone` configured.
 3. 🚩 Prompt - Check that there is no `time-zone` piece of config provisioned at the devices.
-4. 🚩 Prompt - Ask the AI agent to render configuration from the `time-zone` template and variables located in the use case `template` directory and do a dry-run. If succeeded, push it to all devices.
-5. 🚩 Prompt - Ask the AI agent to generate a new jinja2 template and a yaml file containing some variables to render the jinja2 template and push that config to the devices.
-6. 🚩 Prompt or Manual - Destroy the containerlab topology and clean up the environment.
+4. 🚩 Prompt - Ask the AI agent to create a Jinja2 template of the `time-zone` and do a dry-run. If succeeded, push it to all devices.
+5. 🚩 Prompt or Manual - Destroy the containerlab topology and clean up the environment.
 
 ---
 
