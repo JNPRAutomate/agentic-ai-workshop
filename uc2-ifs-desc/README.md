@@ -126,7 +126,7 @@ This step corresponds to `milestones #4 and #5` 🚩.
 > 3. Report those which are either `empty` or `not following the naming convention` and propose a configuration change for it.
 > 4. Ask me for confirmation before commiting the config.
 
-After this prompt, the agent is waiting for you to answer the question. We will reply to it with the following prompt.
+After this prompt, the agent is waiting for you to answer the question.
 
 This step corresponds to `milestone #6` 🚩.
 
