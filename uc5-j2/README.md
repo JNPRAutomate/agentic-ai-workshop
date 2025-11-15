@@ -113,7 +113,7 @@ This step corresponds to `milestone #2` 🚩.
 
 💡tip: If you want to save some tokens, there is no need to run this step, since it is just going to create a table with its findings.
 
-> Connect to each of the PE devices and create a table showing the configuration related to the `time-zone`. If it is empty, just write `EMTPY`.
+> Connect to each of the PE devices and create a table showing the configuration related to the `time-zone`. If it is empty, just write `EMPTY`.
 
 This step corresponds to `milestone #3` 🚩.
 
@@ -130,7 +130,7 @@ This step corresponds to `milestone #4` 🚩.
 #### 5. Prompt - Destroy the topology
 
 1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finishes or proctors move the the next one.
-2. 💡tip: If you feel confortable with ContainerLab and linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
+2. 💡tip: If you feel comfortable with ContainerLab and Linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
 
 ```bash
 claude@jcl-ws-vm-01:~ $ gousecase5

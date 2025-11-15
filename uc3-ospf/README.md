@@ -20,7 +20,7 @@ When a core dump occurs it's essential to rapidly assess the overall network hea
 
 #### Core Dump document
 
-This document is a guide to help retrive JunOS core-dump files from a network device as **non-root** user. Feel free to review and understand the purpose of it.
+This document is a guide to help retrieve JunOS core-dump files from a network device as **non-root** user. Feel free to review and understand the purpose of it.
 
 - [CORE.DUMPS.md](../utils/CORE.DUMPS.md)
 
@@ -138,8 +138,8 @@ This step corresponds to `milestone #7` 🚩.
 
 #### 7. Prompt - Destroy the topology
 
-1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finishes or proctors move the the next one.
-2. 💡tip: If you feel confortable with ContainerLab and linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
+1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finish or proctors move to the next one.
+2. 💡tip: If you feel comfortable with ContainerLab and Linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
 
 ```bash
 claude@jcl-ws-vm-01:~ $ gousecase3

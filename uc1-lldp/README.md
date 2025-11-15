@@ -64,7 +64,7 @@ This step corresponds to `milestone #2` 🚩.
 
 #### 3. Prompt - LLDP
 
-> 1. Remember cRPD JunOS devices have linux interfaces names (e.g. `eth1` or `eth2`), not JunOS interfaces ones (e.g. `ge-0/0/0` or `ge-0/0/1`). Do not configure anything inside the cRPD which does not have a linux interface name (i. e. No `ge-*` interfaces. Only `eth*`). They are mapped as follows:
+> 1. Remember cRPD JunOS devices have Linux interfaces names (e.g. `eth1` or `eth2`), not JunOS interfaces ones (e.g. `ge-0/0/0` or `ge-0/0/1`). Do not configure anything inside the cRPD which does not have a Linux interface name (i. e. No `ge-*` interfaces. Only `eth*`). They are mapped as follows:
 >    - Management:
 >      - eth0 → fxp0
 >    - Physical:
@@ -112,8 +112,8 @@ This step corresponds to `milestones #6 and #7` 🚩.
 
 #### 4. Prompt - Destroy the topology
 
-1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finishes or proctors move the the next one.
-2. 💡tip: If you feel confortable with ContainerLab and linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
+1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finish or proctors move to the next one.
+2. 💡tip: If you feel comfortable with ContainerLab and Linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
 
 ```bash
 claude@jcl-ws-vm-01:~ $ gousecase1

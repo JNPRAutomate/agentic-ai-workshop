@@ -62,7 +62,7 @@ Each use case in this workshop follows a consistent structure to help you naviga
 
 - Every use case directory contains a `README.md` file with detailed instructions, objectives, and step-by-step guidance.  
 - The workspace includes all necessary configuration files, templates, report examples and resources needed to complete the exercises.
-- Each use case is independant from the others and can be executed in any order. It is recommended to follow the instructions of the workshop proctors.
+- Each use case is independent from the others and can be executed in any order. It is recommended to follow the instructions of the workshop proctors.
 - You'll also find a accomplishments list to track your progress as you work through each task.
 
 This standardized scaffolding ensures you can focus on learning the concepts rather than searching for materials.
@@ -245,7 +245,7 @@ To access the workshop VM, you'll need to configure SSH authentication using the
 	ssh -i ~/.ssh/id_rsa_claude claude@${PROVIDED_VM_IP}
 	```
 
-	replacing `${PROVIDED_VM_IP}` with the VM's IP address and `${PROVIDED_VM_PORT}` with the VM's port provided in the e-mail. The public SSH RSA key (`~/.ssh/id_rsa_claude.pub`) was already added to the user `claude` at the workshop VM and the cRDP devices (`~/.ssh/authorized_keys`) so you can SSH into the workshop VM and the cRPD devices without being asked for the password.
+	replacing `${PROVIDED_VM_IP}` with the VM's IP address and `${PROVIDED_VM_PORT}` with the VM's port provided in the e-mail. The public SSH RSA key (`~/.ssh/id_rsa_claude.pub`) was already added to the user `claude` at the workshop VM and the cRPD devices (`~/.ssh/authorized_keys`) so you can SSH into the workshop VM and the cRPD devices without being asked for the password.
 	
 4. For convenience, add below code to your `~/.ssh/config` file. This will allow you to connect to the workshop VM simply by typing **ssh naf-ws-vm**. No password asked! Keep your private key secure and never share it with others or commit it to version control systems.
 
@@ -257,7 +257,7 @@ Host naf-ws-vm
     HostName ${PROVIDED_VM_IP}
     User claude
     Port ${PROVIDED_VM_PORT}
-    IdentityFile ${ABSOLUT_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
+    IdentityFile ${ABSOLUTE_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
     StrictHostKeyChecking no
     IdentitiesOnly yes
 ```
@@ -272,42 +272,42 @@ Configure access to the containerized routers through the VM (please, pay attent
 Host pe1
     HostName 172.20.20.11
     User claude
-    IdentityFile ${ABSOLUT_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
+    IdentityFile ${ABSOLUTE_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
     ProxyCommand ssh -l claude naf-ws-vm nc %h 22 2>/dev/null
     StrictHostKeyChecking no
 
 Host pe2
     HostName 172.20.20.12
     User claude
-    IdentityFile ${ABSOLUT_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
+    IdentityFile ${ABSOLUTE_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
     ProxyCommand ssh -l claude naf-ws-vm nc %h 22 2>/dev/null
     StrictHostKeyChecking no
 
 Host pe3 p
     HostName 172.20.20.13
     User claude
-    IdentityFile ${ABSOLUT_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
+    IdentityFile ${ABSOLUTE_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
     ProxyCommand ssh -l claude naf-ws-vm nc %h 22 2>/dev/null
     StrictHostKeyChecking no
 
 Host pe4 ce1
     HostName 172.20.20.14
     User claude
-    IdentityFile ${ABSOLUT_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
+    IdentityFile ${ABSOLUTE_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
     ProxyCommand ssh -l claude naf-ws-vm nc %h 22 2>/dev/null
     StrictHostKeyChecking no
 
 Host pe5 ce2
     HostName 172.20.20.15
     User claude
-    IdentityFile ${ABSOLUT_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
+    IdentityFile ${ABSOLUTE_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
     ProxyCommand ssh -l claude naf-ws-vm nc %h 22 2>/dev/null
     StrictHostKeyChecking no
 
 Host pe6
     HostName 172.20.20.16
     User claude
-    IdentityFile ${ABSOLUT_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
+    IdentityFile ${ABSOLUTE_PATH_TO_SSH_RSA_CLAUDE} # e.g. /Users/my_user/.ssh/id_rsa_claude
     ProxyCommand ssh -l claude naf-ws-vm nc %h 22 2>/dev/null
     StrictHostKeyChecking no
 ```

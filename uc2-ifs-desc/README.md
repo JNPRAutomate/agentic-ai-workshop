@@ -124,7 +124,7 @@ This step corresponds to `milestones #4 and #5` 🚩.
 > 1. Check if every network device physical interface have a description set. 
 > 2. Verify if they are matching the following format: `$Local_Router $Local_Interface <-> $Remote_Router $Remote_Interface`.
 > 3. Report those which are either `empty` or `not following the naming convention` and propose a configuration change for it.
-> 4. Ask me for confirmation before commiting the config.
+> 4. Ask me for confirmation before committing the config.
 
 After this prompt, the agent is waiting for you to answer the question.
 
@@ -143,7 +143,7 @@ This step corresponds to `milestone #7` 🚩.
 #### 6. Prompt - Destroy the topology
 
 1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finishes or proctors move the the next one.
-2. 💡tip: If you feel confortable with ContainerLab and linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
+2. 💡tip: If you feel comfortable with ContainerLab and Linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
 
 ```bash
 claude@jcl-ws-vm-01:~ $ gousecase2

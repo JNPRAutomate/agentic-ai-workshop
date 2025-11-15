@@ -124,7 +124,7 @@ This step corresponds to `milestone #6` 🚩.
 #### 5. Prompt - Destroy the topology
 
 1. 💡tip: This is the end of this use case. Do not destroy the topology if you still want to play a bit until the rest of the people finishes or proctors move the the next one.
-2. 💡tip: If you feel confortable with ContainerLab and linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
+2. 💡tip: If you feel comfortable with ContainerLab and Linux, you can **save some tokens** by destroying the topology yourself through the CLI issuing the following commands:
 
 ```bash
 claude@jcl-ws-vm-01:~ $ gousecase7
