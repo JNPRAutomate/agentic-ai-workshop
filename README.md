@@ -318,7 +318,7 @@ Host pe6
 	ssh naf-ws-vm
 	```
 
-If it does not work, probably it is because you have been assigned a sandbox in [JCL](https://www.jcl.juniper.net/) (Juniper Cloud Labs) and your public IP has not been allowed (by the support team!). Ask them to do it, or if you got the e-mail with the URL from JCL, just follow below steps. Else, you can skip next step:
+If it does not work, probably it is because you have been assigned a sandbox in [JCL](https://www.jcl.juniper.net/) (Juniper Cloud Labs) and your public IP has not been allowed (by the support team!). Ask them to do it, or if you got the e-mail with the URL from JCL, just follow below steps. Else, you can skip next step. Please note that the containerized devices will not be accessible at this time as they are brought up and down for each lab.
 
 #### 3. Add your public IP to JCL
 Figure out which is your public IP (seen from JCL (Juniper Cloud Labs)). Go to this website and copy the IP:
