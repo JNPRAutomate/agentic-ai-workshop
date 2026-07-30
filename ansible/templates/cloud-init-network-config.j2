@@ -1,0 +1,12 @@
+version: 2
+ethernets:
+  enp1s0:
+    dhcp4: false
+    addresses:
+      - {{ workshop_vm_subnet }}.{{ workshop_vm_ip_offset + vm_index - 1 }}/24
+    routes:
+      - to: default
+        via: {{ workshop_vm_gateway }}
+    nameservers:
+      addresses:
+        - {{ workshop_vm_dns }}

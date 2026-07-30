@@ -205,6 +205,19 @@ Here you can find a screenshot with all the extensions and their icons to help y
 
 ## Getting Started
 
+### Alternative: self-hosted lab
+
+If you're not using a JCL-provisioned sandbox, you can stand up the lab on your own hardware with the Ansible playbooks in [`ansible/`](./ansible/):
+
+- **Single VM** — provision one Ubuntu 22.04 VM with Docker, ContainerLab, and the MCP servers. Use `setup-workshop-vm.yml`.
+- **Multi-user KVM host** — install KVM on a bare-metal Ubuntu host and spin up N isolated guest VMs with NAT and per-user SSH port forwarding. Use `setup-kvm-host.yml` / `teardown-kvm-host.yml`.
+
+Both paths require the cRPD tarball and license file (obtained from Juniper) placed in `ansible/files/`. See [`ansible/README.md`](./ansible/README.md) for prerequisites and run instructions.
+
+Once the VM is up, the rest of this guide applies — just substitute your own VM IP/port and SSH key.
+
+### JCL workshop environment
+
 You should have received an **e-mail** with the details of the workshop (if not, ask the workshop support team). It should have included the following details related to the workshop:
 
 - Repository link

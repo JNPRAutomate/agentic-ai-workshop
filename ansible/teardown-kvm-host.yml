@@ -1,0 +1,150 @@
+---
+# Multi-User Workshop KVM Teardown
+#
+# Destroys all workshop VMs, removes iptables rules, and cleans up the
+# libvirt network and disk images.
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory-host.ini ansible/teardown-kvm-host.yml
+#   ansible-playbook -i ansible/inventory-host.ini ansible/teardown-kvm-host.yml -e workshop_vm_count=5
+
+- name: Teardown KVM workshop environment
+  hosts: kvm_host
+  gather_facts: false
+  tasks:
+    # =========================================================================
+    # 1. Destroy and undefine VMs
+    # =========================================================================
+    - name: Get list of running VMs
+      community.libvirt.virt:
+        command: list_vms
+      register: existing_vms
+
+    - name: Destroy running workshop VMs
+      community.libvirt.virt:
+        name: "workshop-vm-{{ '%02d' | format(item) }}"
+        state: destroyed
+      when: "'workshop-vm-' + '%02d' | format(item) in existing_vms.list_vms"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+      ignore_errors: true
+
+    - name: Undefine workshop VMs
+      community.libvirt.virt:
+        name: "workshop-vm-{{ '%02d' | format(item) }}"
+        command: undefine
+      when: "'workshop-vm-' + '%02d' | format(item) in existing_vms.list_vms"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+      ignore_errors: true
+
+    # =========================================================================
+    # 2. Remove VM disk images and cloud-init files
+    # =========================================================================
+    - name: Remove VM disk images
+      ansible.builtin.file:
+        path: "{{ workshop_vm_images_dir }}/workshop-vm-{{ '%02d' | format(item) }}.qcow2"
+        state: absent
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Remove cloud-init files
+      ansible.builtin.file:
+        path: "{{ workshop_cloudinit_dir }}"
+        state: absent
+
+    # =========================================================================
+    # 3. Remove iptables rules
+    # =========================================================================
+    - name: Remove DNAT rules for SSH port forwarding
+      ansible.builtin.iptables:
+        table: nat
+        chain: PREROUTING
+        protocol: tcp
+        destination_port: "{{ workshop_ssh_port_start + item - 1 }}"
+        jump: DNAT
+        to_destination: "{{ workshop_vm_subnet }}.{{ workshop_vm_ip_offset + item - 1 }}:22"
+        comment: "workshop-vm-{{ '%02d' | format(item) }}-ssh"
+        state: absent
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+      ignore_errors: true
+
+    - name: Remove masquerade rule
+      ansible.builtin.iptables:
+        table: nat
+        chain: POSTROUTING
+        source: "{{ workshop_vm_subnet }}.0/24"
+        jump: MASQUERADE
+        comment: "workshop-vm-nat"
+        state: absent
+      ignore_errors: true
+
+    - name: Remove FORWARD rules
+      ansible.builtin.iptables:
+        chain: FORWARD
+        source: "{{ workshop_vm_subnet }}.0/24"
+        jump: ACCEPT
+        comment: "workshop-vm-forward-out"
+        state: absent
+      ignore_errors: true
+
+    - name: Remove FORWARD established rule
+      ansible.builtin.iptables:
+        chain: FORWARD
+        destination: "{{ workshop_vm_subnet }}.0/24"
+        ctstate:
+          - ESTABLISHED
+          - RELATED
+        jump: ACCEPT
+        comment: "workshop-vm-forward-established"
+        state: absent
+      ignore_errors: true
+
+    - name: Remove FORWARD SSH rule
+      ansible.builtin.iptables:
+        chain: FORWARD
+        destination: "{{ workshop_vm_subnet }}.0/24"
+        protocol: tcp
+        destination_port: "22"
+        jump: ACCEPT
+        comment: "workshop-vm-forward-ssh"
+        state: absent
+      ignore_errors: true
+
+    - name: Save iptables rules
+      ansible.builtin.command: netfilter-persistent save
+      changed_when: true
+
+    # =========================================================================
+    # 4. Remove libvirt network
+    # =========================================================================
+    - name: Destroy libvirt network
+      community.libvirt.virt_net:
+        command: destroy
+        name: "{{ workshop_vm_network_name }}"
+      ignore_errors: true
+
+    - name: Undefine libvirt network
+      community.libvirt.virt_net:
+        command: undefine
+        name: "{{ workshop_vm_network_name }}"
+      ignore_errors: true
+
+    # =========================================================================
+    # 5. Remove generated inventory
+    # =========================================================================
+    - name: Remove generated workshop inventory
+      ansible.builtin.file:
+        path: "{{ workshop_inventory_path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+
+    - name: Display teardown summary
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          Workshop KVM Teardown Complete
+          ========================================
+          Destroyed {{ workshop_vm_count }} VMs
+          Removed iptables rules
+          Removed libvirt network {{ workshop_vm_network_name }}
+          Removed generated inventory
+          ========================================

@@ -1,0 +1,6 @@
+[http]
+	sslverify = false
+[safe]
+	directory = /home/claude/mcps/junos-mcp-server
+	directory = /home/claude/mcps/linux-mcp-server
+	directory = /home/claude/workspace

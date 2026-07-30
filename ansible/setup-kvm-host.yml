@@ -1,0 +1,295 @@
+---
+# Multi-User Workshop KVM Host Setup
+#
+# Installs KVM/libvirt on a bare-metal host, creates N Ubuntu 22.04 guest VMs
+# on a private bridge network, configures iptables NAT/DNAT for SSH access,
+# and generates an inventory file for the existing workshop playbook.
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory-host.ini ansible/setup-kvm-host.yml
+#   ansible-playbook -i ansible/inventory-host.ini ansible/setup-kvm-host.yml -e workshop_vm_count=5
+#
+# Prerequisites:
+#   - Bare-metal host with VT-x/AMD-V support
+#   - Ubuntu 22.04 or 24.04 LTS
+#   - SSH access as root
+#   - Operator's public key at ~/.ssh/id_rsa.pub
+
+- name: Setup KVM host for multi-user workshop
+  hosts: kvm_host
+  gather_facts: true
+  tasks:
+    # =========================================================================
+    # 1. Install KVM/libvirt packages
+    # =========================================================================
+    - name: Install KVM and libvirt packages
+      ansible.builtin.apt:
+        name:
+          - qemu-kvm
+          - libvirt-daemon-system
+          - libvirt-clients
+          - virtinst
+          - cloud-image-utils
+          - genisoimage
+          - iptables-persistent
+          - bridge-utils
+          - python3-libvirt
+          - python3-lxml
+        state: present
+        update_cache: true
+
+    - name: Enable and start libvirtd
+      ansible.builtin.systemd:
+        name: libvirtd
+        enabled: true
+        state: started
+
+    # =========================================================================
+    # 2. Configure libvirt bridge network
+    # =========================================================================
+    - name: Define libvirt network
+      community.libvirt.virt_net:
+        command: define
+        name: "{{ workshop_vm_network_name }}"
+        xml: |
+          <network>
+            <name>{{ workshop_vm_network_name }}</name>
+            <forward mode='nat'/>
+            <bridge name='{{ workshop_vm_bridge }}' stp='on' delay='0'/>
+            <ip address='{{ workshop_vm_gateway }}' netmask='{{ workshop_vm_netmask }}'>
+            </ip>
+          </network>
+      register: net_define
+      failed_when: net_define is failed and 'already exists' not in (net_define.msg | default(''))
+
+    - name: Start libvirt network
+      community.libvirt.virt_net:
+        command: start
+        name: "{{ workshop_vm_network_name }}"
+      register: net_start
+      failed_when: >-
+        net_start is failed
+        and 'already active' not in (net_start.msg | default(''))
+        and 'already in use' not in (net_start.msg | default(''))
+
+    - name: Set libvirt network to autostart
+      community.libvirt.virt_net:
+        name: "{{ workshop_vm_network_name }}"
+        autostart: true
+
+    # =========================================================================
+    # 3. Download Ubuntu cloud image
+    # =========================================================================
+    - name: Create images directory
+      ansible.builtin.file:
+        path: "{{ workshop_vm_images_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Download Ubuntu 22.04 cloud image
+      ansible.builtin.get_url:
+        url: "{{ workshop_base_image_url }}"
+        dest: "{{ workshop_base_image_path }}"
+        mode: "0644"
+
+    # =========================================================================
+    # 4. Create cloud-init directory
+    # =========================================================================
+    - name: Create cloud-init directory
+      ansible.builtin.file:
+        path: "{{ workshop_cloudinit_dir }}"
+        state: directory
+        mode: "0755"
+
+    # =========================================================================
+    # 5. Create VMs
+    # =========================================================================
+    - name: Create VM disks from base image
+      ansible.builtin.command:
+        cmd: >
+          qemu-img create -f qcow2
+          -F qcow2
+          -b {{ workshop_base_image_path }}
+          {{ workshop_vm_images_dir }}/workshop-vm-{{ '%02d' | format(item) }}.qcow2
+          {{ workshop_vm_disk_gb }}G
+        creates: "{{ workshop_vm_images_dir }}/workshop-vm-{{ '%02d' | format(item) }}.qcow2"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Create per-VM cloud-init directories
+      ansible.builtin.file:
+        path: "{{ workshop_cloudinit_dir }}/vm-{{ '%02d' | format(item) }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Generate cloud-init user-data for each VM
+      ansible.builtin.template:
+        src: cloud-init-user-data.j2
+        dest: "{{ workshop_cloudinit_dir }}/vm-{{ '%02d' | format(item) }}/user-data"
+        mode: "0644"
+      vars:
+        vm_index: "{{ item }}"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Generate cloud-init network-config for each VM
+      ansible.builtin.template:
+        src: cloud-init-network-config.j2
+        dest: "{{ workshop_cloudinit_dir }}/vm-{{ '%02d' | format(item) }}/network-config"
+        mode: "0644"
+      vars:
+        vm_index: "{{ item }}"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Create cloud-init meta-data for each VM
+      ansible.builtin.copy:
+        content: |
+          instance-id: workshop-vm-{{ '%02d' | format(item) }}
+          local-hostname: workshop-vm-{{ '%02d' | format(item) }}
+        dest: "{{ workshop_cloudinit_dir }}/vm-{{ '%02d' | format(item) }}/meta-data"
+        mode: "0644"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Create cloud-init ISOs
+      ansible.builtin.command:
+        cmd: >
+          genisoimage -output {{ workshop_cloudinit_dir }}/cidata-{{ '%02d' | format(item) }}.iso
+          -volid cidata -joliet -rock
+          {{ workshop_cloudinit_dir }}/vm-{{ '%02d' | format(item) }}/user-data
+          {{ workshop_cloudinit_dir }}/vm-{{ '%02d' | format(item) }}/meta-data
+          {{ workshop_cloudinit_dir }}/vm-{{ '%02d' | format(item) }}/network-config
+        creates: "{{ workshop_cloudinit_dir }}/cidata-{{ '%02d' | format(item) }}.iso"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Check if VMs already exist
+      community.libvirt.virt:
+        command: list_vms
+      register: existing_vms
+
+    - name: Create VMs with virt-install
+      ansible.builtin.command:
+        cmd: >
+          virt-install
+          --name workshop-vm-{{ '%02d' | format(item) }}
+          --memory {{ workshop_vm_memory_mb }}
+          --vcpus {{ workshop_vm_cpus }}
+          --disk path={{ workshop_vm_images_dir }}/workshop-vm-{{ '%02d' | format(item) }}.qcow2,format=qcow2
+          --disk path={{ workshop_cloudinit_dir }}/cidata-{{ '%02d' | format(item) }}.iso,device=cdrom
+          --os-variant ubuntu22.04
+          --network network={{ workshop_vm_network_name }}
+          --graphics none
+          --console pty,target_type=serial
+          --noautoconsole
+          --import
+      when: "'workshop-vm-' + '%02d' | format(item) not in existing_vms.list_vms"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    # =========================================================================
+    # 6. Configure iptables NAT and port forwarding
+    # =========================================================================
+    - name: Enable IP forwarding
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        sysctl_set: true
+        reload: true
+
+    - name: Add masquerade rule for VM subnet
+      ansible.builtin.iptables:
+        table: nat
+        chain: POSTROUTING
+        source: "{{ workshop_vm_subnet }}.0/24"
+        jump: MASQUERADE
+        comment: "workshop-vm-nat"
+      register: masq_rule
+
+    - name: Add DNAT rules for SSH port forwarding
+      ansible.builtin.iptables:
+        table: nat
+        chain: PREROUTING
+        protocol: tcp
+        destination_port: "{{ workshop_ssh_port_start + item - 1 }}"
+        jump: DNAT
+        to_destination: "{{ workshop_vm_subnet }}.{{ workshop_vm_ip_offset + item - 1 }}:22"
+        comment: "workshop-vm-{{ '%02d' | format(item) }}-ssh"
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    - name: Add FORWARD ACCEPT rules for DNAT traffic to VMs
+      ansible.builtin.iptables:
+        chain: FORWARD
+        action: insert
+        rule_num: "1"
+        destination: "{{ workshop_vm_subnet }}.0/24"
+        protocol: tcp
+        destination_port: "22"
+        jump: ACCEPT
+        comment: "workshop-vm-forward-ssh"
+
+    - name: Add FORWARD ACCEPT rules for established connections to VMs
+      ansible.builtin.iptables:
+        chain: FORWARD
+        action: insert
+        rule_num: "1"
+        destination: "{{ workshop_vm_subnet }}.0/24"
+        ctstate:
+          - ESTABLISHED
+          - RELATED
+        jump: ACCEPT
+        comment: "workshop-vm-forward-established"
+
+    - name: Add FORWARD ACCEPT rules for VM subnet
+      ansible.builtin.iptables:
+        chain: FORWARD
+        action: insert
+        rule_num: "1"
+        source: "{{ workshop_vm_subnet }}.0/24"
+        jump: ACCEPT
+        comment: "workshop-vm-forward-out"
+
+    - name: Save iptables rules
+      ansible.builtin.command: netfilter-persistent save
+      changed_when: true
+
+    # =========================================================================
+    # 7. Generate workshop inventory
+    # =========================================================================
+    - name: Generate workshop VM inventory
+      ansible.builtin.template:
+        src: workshop-inventory.j2
+        dest: "{{ workshop_inventory_path }}"
+        mode: "0644"
+      delegate_to: localhost
+      become: false
+
+    # =========================================================================
+    # 8. Wait for VMs to be reachable
+    # =========================================================================
+    - name: Wait for VMs to be reachable via SSH
+      ansible.builtin.wait_for:
+        host: "{{ workshop_vm_subnet }}.{{ workshop_vm_ip_offset + item - 1 }}"
+        port: 22
+        timeout: 300
+        delay: 10
+      loop: "{{ range(1, workshop_vm_count | int + 1) | list }}"
+
+    # =========================================================================
+    # 9. Display summary
+    # =========================================================================
+    - name: Display workshop setup summary
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          Workshop KVM Host Setup Complete
+          ========================================
+          VMs created:     {{ workshop_vm_count }}
+          VM subnet:       {{ workshop_vm_subnet }}.0/24
+          SSH port range:  {{ workshop_ssh_port_start }}-{{ workshop_ssh_port_start | int + workshop_vm_count | int - 1 }}
+          Inventory file:  {{ workshop_inventory_path }}
+
+          User access:
+          {% for i in range(1, workshop_vm_count | int + 1) %}
+            VM {{ '%02d' | format(i) }}: ssh -p {{ workshop_ssh_port_start + i - 1 }} labuser@<host-public-ip>
+          {% endfor %}
+
+          Next step:
+            ansible-playbook -i {{ workshop_inventory_path }} ansible/setup-workshop-vm.yml
+          ========================================

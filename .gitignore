@@ -24,3 +24,6 @@
 
 # Config files
 settings.json
+
+# cRPD images
+ansible/files/crpd*.tgz

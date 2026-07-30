@@ -1,0 +1,481 @@
+---
+# Agentic AI Workshop VM Setup Playbook
+# Provisions an Ubuntu 22.04 VM to match the naf-ws-vm configuration
+#
+# Prerequisites:
+#   - Ubuntu 22.04 LTS target host
+#   - SSH access as a user with sudo privileges (e.g. labuser)
+#   - cRPD Docker image tarball (crpd-25.2R1.9.tgz) placed in ansible/files/
+#
+# Usage:
+#   ansible-playbook -i inventory.ini setup-workshop-vm.yml
+#
+# To skip the cRPD image load (if already present or loading separately):
+#   ansible-playbook -i inventory.ini setup-workshop-vm.yml --skip-tags crpd
+
+- name: Setup Agentic AI Workshop VM
+  hosts: workshop_vm
+  become: true
+  vars:
+    claude_user: claude
+    claude_uid: 1001
+    claude_home: /home/claude
+    workspace_repo: https://github.com/JNPRAutomate/agentic-ai-workshop.git
+    junos_mcp_repo: https://github.com/Juniper/junos-mcp-server.git
+    linux_mcp_repo: https://github.com/JNPRAutomate/linux-mcp-server.git
+    linux_mcp_tag: V1.0
+    crpd_image_file: crpd-25.2R1.9.tgz
+    crpd_image_name: "crpd:25.2R1.9"
+    alpine_image: "alpine:3.22.1"
+    crpd_license_file: DemolabJUNOS.cRPD.lic
+    # Use cases that reference a cRPD license file
+    license_use_cases:
+      - uc3-ospf
+      - uc4-isis
+      - uc8-health
+
+  tasks:
+    # =========================================================================
+    # 1. System packages and prerequisites
+    # =========================================================================
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install base system packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - git
+          - python3
+          - python3-pip
+          - python3-venv
+          - python3-dev
+          - openssh-server
+          - jq
+          - acl
+        state: present
+
+    # =========================================================================
+    # 2. Docker installation
+    # =========================================================================
+    - name: Remove conflicting Docker packages
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-doc
+          - docker-compose
+          - docker-compose-v2
+          - podman-docker
+          - containerd
+          - runc
+        state: absent
+      ignore_errors: true
+
+    - name: Create Docker keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker Engine
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker service
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # =========================================================================
+    # 3. ContainerLab installation
+    # =========================================================================
+    - name: Install ContainerLab
+      ansible.builtin.shell: |
+        curl -sL https://containerlab.dev/setup | bash -s "all"
+      args:
+        creates: /usr/bin/clab
+
+    # =========================================================================
+    # 4. User and group setup
+    # =========================================================================
+    - name: Ensure clab_admins group exists
+      ansible.builtin.group:
+        name: clab_admins
+        state: present
+
+    - name: Create claude user
+      ansible.builtin.user:
+        name: "{{ claude_user }}"
+        uid: "{{ claude_uid }}"
+        shell: /bin/bash
+        create_home: true
+        groups:
+          - docker
+          - clab_admins
+        append: true
+
+    # =========================================================================
+    # 5. SSH key setup
+    # =========================================================================
+    - name: Create .ssh directory
+      ansible.builtin.file:
+        path: "{{ claude_home }}/.ssh"
+        state: directory
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0700"
+
+    - name: Copy SSH private key
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../utils/id_rsa_claude"
+        dest: "{{ claude_home }}/.ssh/id_rsa_claude"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0600"
+
+    - name: Copy SSH public key
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../utils/id_rsa_claude.pub"
+        dest: "{{ claude_home }}/.ssh/id_rsa_claude.pub"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+
+    - name: Set up authorized_keys from public key
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../utils/id_rsa_claude.pub"
+        dest: "{{ claude_home }}/.ssh/authorized_keys"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0600"
+
+    - name: Deploy SSH config
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../utils/ssh.config"
+        dest: "{{ claude_home }}/.ssh/config"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0664"
+
+    # =========================================================================
+    # 6. UV package manager installation (as claude user)
+    # =========================================================================
+    - name: Install uv package manager
+      ansible.builtin.shell: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+      args:
+        creates: "{{ claude_home }}/.local/bin/uv"
+      become_user: "{{ claude_user }}"
+      environment:
+        HOME: "{{ claude_home }}"
+
+    - name: Deploy env script for PATH setup
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/env"
+        dest: "{{ claude_home }}/.local/bin/env"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0755"
+
+    # =========================================================================
+    # 7. Shell configuration
+    # =========================================================================
+    - name: Deploy bash_aliases
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../utils/bash_aliases"
+        dest: "{{ claude_home }}/.bash_aliases"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+
+    - name: Deploy .bashrc (Ubuntu default + customizations)
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/bashrc.j2"
+        dest: "{{ claude_home }}/.bashrc"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+
+    - name: Deploy .profile
+      ansible.builtin.copy:
+        content: |
+          # ~/.profile: executed by the command interpreter for login shells.
+          if [ -n "$BASH_VERSION" ]; then
+              if [ -f "$HOME/.bashrc" ]; then
+                  . "$HOME/.bashrc"
+              fi
+          fi
+          if [ -d "$HOME/bin" ] ; then
+              PATH="$HOME/bin:$PATH"
+          fi
+          if [ -d "$HOME/.local/bin" ] ; then
+              PATH="$HOME/.local/bin:$PATH"
+          fi
+          . "$HOME/.local/bin/env"
+        dest: "{{ claude_home }}/.profile"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+
+    - name: Deploy .zshrc
+      ansible.builtin.copy:
+        content: |
+          . "$HOME/.local/bin/env"
+        dest: "{{ claude_home }}/.zshrc"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0664"
+
+    - name: Deploy .gitconfig
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/gitconfig"
+        dest: "{{ claude_home }}/.gitconfig"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0664"
+
+    # =========================================================================
+    # 8. Clone workshop workspace repository
+    # =========================================================================
+    - name: Clone workshop workspace repository
+      ansible.builtin.git:
+        repo: "{{ workspace_repo }}"
+        dest: "{{ claude_home }}/workspace"
+        version: main
+        force: false
+      become_user: "{{ claude_user }}"
+      environment:
+        GIT_SSL_NO_VERIFY: "true"
+
+    # =========================================================================
+    # 9. Clone MCP server repositories
+    # =========================================================================
+    - name: Create mcps directory
+      ansible.builtin.file:
+        path: "{{ claude_home }}/mcps"
+        state: directory
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0755"
+
+    - name: Clone Junos MCP server
+      ansible.builtin.git:
+        repo: "{{ junos_mcp_repo }}"
+        dest: "{{ claude_home }}/mcps/junos-mcp-server"
+        version: main
+        force: false
+      become_user: "{{ claude_user }}"
+      environment:
+        GIT_SSL_NO_VERIFY: "true"
+
+    - name: Clone Linux MCP server
+      ansible.builtin.git:
+        repo: "{{ linux_mcp_repo }}"
+        dest: "{{ claude_home }}/mcps/linux-mcp-server"
+        version: "{{ linux_mcp_tag }}"
+        force: false
+      become_user: "{{ claude_user }}"
+      environment:
+        GIT_SSL_NO_VERIFY: "true"
+
+    # =========================================================================
+    # 10. Configure MCP servers
+    # =========================================================================
+    - name: Deploy devices.json for Junos MCP server
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../utils/devices.json"
+        dest: "{{ claude_home }}/mcps/junos-mcp-server/devices.json"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+
+    - name: Deploy .env for Linux MCP server
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/linux-mcp-server.env"
+        dest: "{{ claude_home }}/mcps/linux-mcp-server/.env"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+
+    # =========================================================================
+    # 11. Set up Python virtual environments for MCP servers
+    # =========================================================================
+    - name: Create venv and install deps for Junos MCP server
+      ansible.builtin.shell: |
+        {{ claude_home }}/.local/bin/uv venv .venv && \
+        {{ claude_home }}/.local/bin/uv pip install -r requirements.txt 2>/dev/null || \
+        {{ claude_home }}/.local/bin/uv sync
+      args:
+        chdir: "{{ claude_home }}/mcps/junos-mcp-server"
+        creates: "{{ claude_home }}/mcps/junos-mcp-server/.venv/bin/python"
+      become_user: "{{ claude_user }}"
+      environment:
+        HOME: "{{ claude_home }}"
+        PATH: "{{ claude_home }}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+
+    - name: Create venv and install deps for Linux MCP server
+      ansible.builtin.shell: |
+        {{ claude_home }}/.local/bin/uv venv .venv && \
+        {{ claude_home }}/.local/bin/uv pip install -r requirements.txt
+      args:
+        chdir: "{{ claude_home }}/mcps/linux-mcp-server"
+        creates: "{{ claude_home }}/mcps/linux-mcp-server/.venv/bin/python"
+      become_user: "{{ claude_user }}"
+      environment:
+        HOME: "{{ claude_home }}"
+        PATH: "{{ claude_home }}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+
+    # =========================================================================
+    # 12. Create images directory (for cRPD tarball staging)
+    # =========================================================================
+    - name: Create images directory
+      ansible.builtin.file:
+        path: "{{ claude_home }}/images"
+        state: directory
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0755"
+
+    # =========================================================================
+    # 13. Docker images
+    # =========================================================================
+    - name: Pull Alpine Linux image
+      community.docker.docker_image:
+        name: "{{ alpine_image }}"
+        source: pull
+
+    - name: Check if cRPD image exists
+      community.docker.docker_image_info:
+        name: "{{ crpd_image_name }}"
+      register: crpd_check
+
+    - name: Copy cRPD image tarball to VM
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/{{ crpd_image_file }}"
+        dest: "{{ claude_home }}/images/{{ crpd_image_file }}"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+      when: crpd_check.images | length == 0
+      tags: crpd
+
+    - name: Load cRPD Docker image from tarball
+      community.docker.docker_image:
+        name: "{{ crpd_image_name }}"
+        load_path: "{{ claude_home }}/images/{{ crpd_image_file }}"
+        source: load
+      when: crpd_check.images | length == 0
+      tags: crpd
+
+    # =========================================================================
+    # 14. Deploy cRPD license file to use cases that require it
+    # =========================================================================
+    - name: Create license directories for use cases
+      ansible.builtin.file:
+        path: "{{ claude_home }}/workspace/{{ item }}/license"
+        state: directory
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0755"
+      loop: "{{ license_use_cases }}"
+
+    - name: Deploy cRPD license file to use cases
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/{{ crpd_license_file }}"
+        dest: "{{ claude_home }}/workspace/{{ item }}/license/{{ crpd_license_file }}"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        mode: "0644"
+      loop: "{{ license_use_cases }}"
+
+    # =========================================================================
+    # 15. Fix ownership on all claude home contents
+    # =========================================================================
+    - name: Ensure correct ownership of claude home directory
+      ansible.builtin.file:
+        path: "{{ claude_home }}"
+        owner: "{{ claude_user }}"
+        group: "{{ claude_user }}"
+        recurse: true
+
+    # =========================================================================
+    # 16. Verification
+    # =========================================================================
+    - name: Verify Docker is accessible by claude user
+      ansible.builtin.command: docker ps
+      become_user: "{{ claude_user }}"
+      changed_when: false
+
+    - name: Verify ContainerLab is installed
+      ansible.builtin.command: clab version
+      changed_when: false
+
+    - name: Verify Python version
+      ansible.builtin.command: python3 --version
+      changed_when: false
+      register: python_version
+
+    - name: Verify uv is installed
+      ansible.builtin.command: "{{ claude_home }}/.local/bin/uv --version"
+      become_user: "{{ claude_user }}"
+      changed_when: false
+      register: uv_version
+
+    - name: Verify workspace exists
+      ansible.builtin.stat:
+        path: "{{ claude_home }}/workspace/README.md"
+      register: workspace_check
+
+    - name: Verify Junos MCP server exists
+      ansible.builtin.stat:
+        path: "{{ claude_home }}/mcps/junos-mcp-server/jmcp.py"
+      register: junos_mcp_check
+
+    - name: Verify Linux MCP server exists
+      ansible.builtin.stat:
+        path: "{{ claude_home }}/mcps/linux-mcp-server/linux-mcp-server.py"
+      register: linux_mcp_check
+
+    - name: Verify SSH keys exist
+      ansible.builtin.stat:
+        path: "{{ claude_home }}/.ssh/id_rsa_claude"
+      register: ssh_key_check
+
+    - name: Display verification results
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          Workshop VM Setup Verification
+          ========================================
+          Python:           {{ python_version.stdout }}
+          UV:               {{ uv_version.stdout }}
+          Workspace:        {{ 'OK' if workspace_check.stat.exists else 'MISSING' }}
+          Junos MCP Server: {{ 'OK' if junos_mcp_check.stat.exists else 'MISSING' }}
+          Linux MCP Server: {{ 'OK' if linux_mcp_check.stat.exists else 'MISSING' }}
+          SSH Keys:         {{ 'OK' if ssh_key_check.stat.exists else 'MISSING' }}
+          ========================================
